@@ -35,8 +35,13 @@ def extract_text_from_pdf(uploaded_file) -> str:
 
 def get_gemini_client(api_key: str):
     """Initializes and returns the Google Gemini Client with a sanitized key."""
+    # Fall back to Streamlit Secrets if api_key is empty
+    if not api_key:
+        api_key = st.secrets.get("GEMINI_API_KEY", "")
+
     if not api_key:
         return None
+
     clean_key = api_key.strip().strip("'").strip('"')
     return genai.Client(api_key=clean_key)
 
@@ -133,13 +138,8 @@ with st.sidebar:
         st.session_state.interview_started = False
         st.rerun()
 
-# Safely read Streamlit Secrets if available
-secrets_key = ""
-try:
-    if "GEMINI_API_KEY" in st.secrets:
-        secrets_key = st.secrets["GEMINI_API_KEY"]
-except Exception:
-    secrets_key = ""
+# Safely check Streamlit Secrets using dict .get() method
+secrets_key = st.secrets.get("GEMINI_API_KEY", "")
 
 # Prioritize manual user input; fall back to Streamlit secrets
 active_api_key = user_key_input.strip() if user_key_input.strip() else secrets_key
