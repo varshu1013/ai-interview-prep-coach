@@ -1,5 +1,3 @@
-secrets_key = st.secrets.get("GEMINI_API_KEY", "") if "GEMINI_API_KEY" in st.secrets else ""
-active_api_key = user_key_input.strip() if user_key_input.strip() else secrets_key
 import json
 import re
 import pandas as pd
@@ -124,7 +122,7 @@ st.divider()
 # Sidebar: API Key Configuration
 with st.sidebar:
     st.header("⚙️ Configuration")
-    user_key_input = st.text_input("Enter Gemini API Key (optional if using Secrets):", type="password")
+    user_key_input = st.text_input("Enter Gemini API Key (optional if saved in Secrets):", type="password")
     st.info("Get a free API key from [Google AI Studio](https://aistudio.google.com/).")
     
     st.divider()
@@ -135,8 +133,15 @@ with st.sidebar:
         st.session_state.interview_started = False
         st.rerun()
 
-# Determine active key (Secrets first, then sidebar input)
-secrets_key = st.secrets.get("GEMINI_API_KEY", "") if "GEMINI_API_KEY" in st.secrets else ""
+# Safely read Streamlit Secrets if available
+secrets_key = ""
+try:
+    if "GEMINI_API_KEY" in st.secrets:
+        secrets_key = st.secrets["GEMINI_API_KEY"]
+except Exception:
+    secrets_key = ""
+
+# Prioritize manual user input; fall back to Streamlit secrets
 active_api_key = user_key_input.strip() if user_key_input.strip() else secrets_key
 
 # -----------------------------------------------------------------------------
@@ -164,7 +169,7 @@ if not st.session_state.interview_started:
 
     if st.button("🚀 Start Mock Interview", type="primary"):
         if not active_api_key:
-            st.error("Please enter a Gemini API Key in the sidebar or configure GEMINI_API_KEY in Secrets.")
+            st.error("Please enter a valid Gemini API Key in the sidebar or save it under Secrets.")
         elif not target_role.strip():
             st.error("Please enter a Target Job Role.")
         else:
