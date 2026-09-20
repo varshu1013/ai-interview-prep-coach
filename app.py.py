@@ -1,3 +1,5 @@
+secrets_key = st.secrets.get("GEMINI_API_KEY", "") if "GEMINI_API_KEY" in st.secrets else ""
+active_api_key = user_key_input.strip() if user_key_input.strip() else secrets_key
 import json
 import re
 import pandas as pd
