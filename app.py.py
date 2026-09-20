@@ -4,6 +4,9 @@ import streamlit as st
 api_key = st.secrets.get("GEMINI_API_KEY") or gemini_api_key
 
 # 2. Add helper function to clean the key string
+def get_gemini_client(api_key: str):
+    clean_key = api_key.strip().strip("'").strip('"')
+    return genai.Client(api_key=clean_key)import json
 def get_gemini_client(key: str):
     if not key:
         return None
