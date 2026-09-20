@@ -1,19 +1,4 @@
-import streamlit as st
-
-# 1. Read API Key from Streamlit Secrets first, fallback to Sidebar input
-api_key = st.secrets.get("GEMINI_API_KEY") or gemini_api_key
-
-# 2. Add helper function to clean the key string
-def get_gemini_client(api_key: str):
-    clean_key = api_key.strip().strip("'").strip('"')
-    return genai.Client(api_key=clean_key)
-    import json
-def get_gemini_client(key: str):
-    if not key:
-        return None
-    clean_key = key.strip().strip("'").strip('"')
-    return genai.Client(api_key=clean_key)
-    import json
+import json
 import re
 import pandas as pd
 import PyPDF2
@@ -49,8 +34,11 @@ def extract_text_from_pdf(uploaded_file) -> str:
 
 
 def get_gemini_client(api_key: str):
-    """Initializes and returns the Google Gemini Client."""
-    return genai.Client(api_key=api_key)
+    """Initializes and returns the Google Gemini Client with a sanitized key."""
+    if not api_key:
+        return None
+    clean_key = api_key.strip().strip("'").strip('"')
+    return genai.Client(api_key=clean_key)
 
 
 def generate_interview_questions(client, role: str, experience: str, domain: str, resume_text: str, num_questions: int = 3):
@@ -134,7 +122,7 @@ st.divider()
 # Sidebar: API Key Configuration
 with st.sidebar:
     st.header("⚙️ Configuration")
-    gemini_api_key = st.text_input("Enter Gemini API Key:", type="password")
+    user_key_input = st.text_input("Enter Gemini API Key (optional if using Secrets):", type="password")
     st.info("Get a free API key from [Google AI Studio](https://aistudio.google.com/).")
     
     st.divider()
@@ -144,6 +132,10 @@ with st.sidebar:
         st.session_state.evaluation_history = []
         st.session_state.interview_started = False
         st.rerun()
+
+# Determine active key (Secrets first, then sidebar input)
+secrets_key = st.secrets.get("GEMINI_API_KEY", "") if "GEMINI_API_KEY" in st.secrets else ""
+active_api_key = user_key_input.strip() if user_key_input.strip() else secrets_key
 
 # -----------------------------------------------------------------------------
 # STEP 1: INTERVIEW SETUP & CONTEXT INGESTION
@@ -169,14 +161,14 @@ if not st.session_state.interview_started:
                 st.write(resume_text[:500] + "..." if len(resume_text) > 500 else resume_text)
 
     if st.button("🚀 Start Mock Interview", type="primary"):
-        if not gemini_api_key.strip():
-            st.error("Please provide a valid Gemini API Key in the sidebar.")
+        if not active_api_key:
+            st.error("Please enter a Gemini API Key in the sidebar or configure GEMINI_API_KEY in Secrets.")
         elif not target_role.strip():
             st.error("Please enter a Target Job Role.")
         else:
             with st.spinner("Analyzing profile & generating customized interview questions..."):
                 try:
-                    client = get_gemini_client(gemini_api_key)
+                    client = get_gemini_client(active_api_key)
                     questions = generate_interview_questions(
                         client, target_role, experience_level, tech_domain, resume_text, num_q
                     )
@@ -218,7 +210,7 @@ else:
             else:
                 with st.spinner("AI Evaluator is analyzing your response..."):
                     try:
-                        client = get_gemini_client(gemini_api_key)
+                        client = get_gemini_client(active_api_key)
                         evaluation = evaluate_candidate_answer(
                             client, current_question, candidate_response, "Candidate"
                         )
